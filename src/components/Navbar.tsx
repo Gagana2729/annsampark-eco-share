@@ -1,11 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Sprout } from "lucide-react";
+import { Menu, X, Sprout, LogOut } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   const navItems = [
     { name: "Home", path: "/" },
@@ -45,9 +47,16 @@ const Navbar = () => {
                 </Button>
               </Link>
             ))}
-            <Link to="/login">
-              <Button className="ml-4">Login</Button>
-            </Link>
+            {user ? (
+              <Button onClick={() => signOut()} variant="outline" className="ml-4">
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            ) : (
+              <Link to="/login">
+                <Button className="ml-4">Login</Button>
+              </Link>
+            )}
           </div>
 
           <button
@@ -74,9 +83,16 @@ const Navbar = () => {
                 {item.name}
               </Link>
             ))}
-            <Link to="/login" onClick={() => setIsOpen(false)}>
-              <Button className="w-full mt-4">Login</Button>
-            </Link>
+            {user ? (
+              <Button onClick={() => signOut()} variant="outline" className="w-full mt-4">
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            ) : (
+              <Link to="/login" onClick={() => setIsOpen(false)}>
+                <Button className="w-full mt-4">Login</Button>
+              </Link>
+            )}
           </div>
         )}
       </div>
