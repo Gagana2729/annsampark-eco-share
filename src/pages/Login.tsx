@@ -1,29 +1,52 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
   const [isRegister, setIsRegister] = useState(false);
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState("donor");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { signIn, signUp, user, userRole } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Redirect authenticated users
+  useEffect(() => {
+    if (user && userRole) {
+      if (userRole === "donor") navigate("/donor-dashboard");
+      else if (userRole === "receiver") navigate("/receiver-dashboard");
+      else if (userRole === "admin") navigate("/admin-dashboard");
+      else navigate("/");
+    }
+  }, [user, userRole, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: isRegister ? "Registration Successful!" : "Login Successful!",
-      description: `Welcome to AnnSampark${role ? ` as ${role}` : ""}`,
-    });
-    
-    if (role === "donor") navigate("/donor-dashboard");
-    else if (role === "receiver") navigate("/receiver-dashboard");
-    else if (role === "admin") navigate("/admin-dashboard");
-    else navigate("/");
+    setLoading(true);
+
+    try {
+      if (isRegister) {
+        const { error } = await signUp(email, password, fullName, role);
+        if (error) toast.error(error.message);
+        else toast.success("Account created successfully!");
+      } else {
+        const { error } = await signIn(email, password);
+        if (error) toast.error(error.message);
+        else toast.success("Logged in successfully!");
+      }
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -42,18 +65,38 @@ const Login = () => {
             {isRegister && (
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
-                <Input id="name" placeholder="Enter your name" required />
+                <Input 
+                  id="name" 
+                  placeholder="Enter your name" 
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required 
+                />
               </div>
             )}
             
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="your@email.com" required />
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="your@email.com" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required 
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" placeholder="••••••••" required />
+              <Input 
+                id="password" 
+                type="password" 
+                placeholder="••••••••" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required 
+              />
             </div>
 
             <div className="space-y-2">
@@ -70,8 +113,8 @@ const Login = () => {
               </Select>
             </div>
 
-            <Button type="submit" className="w-full">
-              {isRegister ? "Register" : "Login"}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Loading..." : (isRegister ? "Register" : "Login")}
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">
