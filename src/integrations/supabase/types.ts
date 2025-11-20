@@ -14,16 +14,277 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      book_donations: {
+        Row: {
+          author: string
+          buyer_id: string | null
+          condition: Database["public"]["Enums"]["item_condition"]
+          created_at: string
+          description: string | null
+          donor_id: string
+          genre: string | null
+          id: string
+          image_url: string | null
+          price: number
+          status: Database["public"]["Enums"]["donation_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author: string
+          buyer_id?: string | null
+          condition?: Database["public"]["Enums"]["item_condition"]
+          created_at?: string
+          description?: string | null
+          donor_id: string
+          genre?: string | null
+          id?: string
+          image_url?: string | null
+          price?: number
+          status?: Database["public"]["Enums"]["donation_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author?: string
+          buyer_id?: string | null
+          condition?: Database["public"]["Enums"]["item_condition"]
+          created_at?: string
+          description?: string | null
+          donor_id?: string
+          genre?: string | null
+          id?: string
+          image_url?: string | null
+          price?: number
+          status?: Database["public"]["Enums"]["donation_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_donations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "book_donations_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cloth_donations: {
+        Row: {
+          category: string | null
+          condition: Database["public"]["Enums"]["item_condition"]
+          created_at: string
+          description: string | null
+          donor_id: string
+          gender: string | null
+          id: string
+          image_url: string | null
+          location: string
+          receiver_id: string | null
+          size: string | null
+          status: Database["public"]["Enums"]["donation_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          condition?: Database["public"]["Enums"]["item_condition"]
+          created_at?: string
+          description?: string | null
+          donor_id: string
+          gender?: string | null
+          id?: string
+          image_url?: string | null
+          location: string
+          receiver_id?: string | null
+          size?: string | null
+          status?: Database["public"]["Enums"]["donation_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          condition?: Database["public"]["Enums"]["item_condition"]
+          created_at?: string
+          description?: string | null
+          donor_id?: string
+          gender?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string
+          receiver_id?: string | null
+          size?: string | null
+          status?: Database["public"]["Enums"]["donation_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cloth_donations_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cloth_donations_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      food_donations: {
+        Row: {
+          created_at: string
+          description: string | null
+          donor_id: string
+          expire_at: string
+          id: string
+          image_url: string | null
+          latitude: number | null
+          location: string
+          longitude: number | null
+          quantity: string
+          receiver_id: string | null
+          status: Database["public"]["Enums"]["donation_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          donor_id: string
+          expire_at: string
+          id?: string
+          image_url?: string | null
+          latitude?: number | null
+          location: string
+          longitude?: number | null
+          quantity: string
+          receiver_id?: string | null
+          status?: Database["public"]["Enums"]["donation_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          donor_id?: string
+          expire_at?: string
+          id?: string
+          image_url?: string | null
+          latitude?: number | null
+          location?: string
+          longitude?: number | null
+          quantity?: string
+          receiver_id?: string | null
+          status?: Database["public"]["Enums"]["donation_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "food_donations_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_donations_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "donor" | "receiver" | "admin"
+      donation_status: "available" | "claimed" | "completed" | "expired"
+      item_condition: "new" | "like_new" | "good" | "fair"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +411,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["donor", "receiver", "admin"],
+      donation_status: ["available", "claimed", "completed", "expired"],
+      item_condition: ["new", "like_new", "good", "fair"],
+    },
   },
 } as const
