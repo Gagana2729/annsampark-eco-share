@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [organizationName, setOrganizationName] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { signIn, signUp, user, userRole } = useAuth();
@@ -34,7 +35,7 @@ const Login = () => {
 
     try {
       if (isRegister) {
-        const { error } = await signUp(email, password, fullName, role);
+        const { error } = await signUp(email, password, fullName, role, organizationName || undefined);
         if (error) toast.error(error.message);
         else toast.success("Account created successfully!");
       } else {
@@ -63,39 +64,56 @@ const Login = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {isRegister && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input 
-                  id="name" 
-                  placeholder="Enter your name" 
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required 
-                />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    placeholder="Enter your name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {(role === "receiver" || role === "donor") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="orgName">
+                      {role === "receiver" ? "Organization/NGO Name" : "Organization Name (Optional)"}
+                    </Label>
+                    <Input
+                      id="orgName"
+                      placeholder={role === "receiver" ? "Enter your organization name" : "Restaurant/Business name"}
+                      value={organizationName}
+                      onChange={(e) => setOrganizationName(e.target.value)}
+                      required={role === "receiver"}
+                    />
+                  </div>
+                )}
+              </>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="your@email.com" 
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required 
+                required
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                placeholder="••••••••" 
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required 
+                required
               />
             </div>
 

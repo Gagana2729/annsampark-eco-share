@@ -1,61 +1,126 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { Package, MapPin, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { Package, MapPin, Clock, Loader2, Search, Heart } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { donationService, userService } from "@/services";
 
 const ReceiverDashboard = () => {
-  const { toast } = useToast();
+  const { user } = useAuth();
+  const [donations, setDonations] = useState<any[]>([]);
+  const [myRequests, setMyRequests] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const handleAccept = (item: string) => {
-    toast({
-      title: "Request Accepted!",
-      description: `Pickup details for ${item} will be sent to you shortly.`,
-    });
+  useEffect(() => {
+    fetchDonations();
+    fetchMyRequests();
+    fetchStats();
+  }, [filterType]);
+
+  const fetchDonations = async () => {
+    try {
+      const params: any = { status: "available" };
+      if (filterType !== "all") {
+        params.type = filterType;
+      }
+      const response = await donationService.getAllDonations(params);
+      setDonations(response.data || []);
+    } catch (error: any) {
+      console.error("Error fetching donations:", error);
+      toast.error("Failed to load donations");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleReject = (item: string) => {
-    toast({
-      title: "Request Declined",
-      description: `${item} will be offered to other receivers.`,
-      variant: "destructive",
-    });
+  const fetchMyRequests = async () => {
+    try {
+      const response = await donationService.getMyDonations();
+      // Filter for claimed donations
+      const claimed = (response.data || []).filter((d: any) => d.claimedBy?._id === user?._id);
+      setMyRequests(claimed);
+    } catch (error: any) {
+      console.error("Error fetching requests:", error);
+    }
   };
 
-  const availableDonations = [
-    { id: 1, item: "Cooked Rice", quantity: "50 plates", location: "MG Road Restaurant", distance: "2.3 km", expiry: "3 hours", type: "food" },
-    { id: 2, item: "Engineering Textbooks", quantity: "20 books", location: "VTU Campus", distance: "5.1 km", expiry: null, type: "books" },
-    { id: 3, item: "Winter Jackets", quantity: "15 pieces", location: "City Mall", distance: "3.8 km", expiry: null, type: "clothes" },
-  ];
+  const fetchStats = async () => {
+    try {
+      const response = await userService.getStats();
+      setStats(response.data);
+    } catch (error: any) {
+      console.error("Error fetching stats:", error);
+    }
+  };
 
-  const confirmedRequests = [
-    { item: "Food Packets", quantity: "30 units", status: "In Transit", eta: "30 mins" },
-    { item: "Children's Books", quantity: "10 books", status: "Confirmed", eta: "2 hours" },
-  ];
+  const handleClaim = async (donationId: string) => {
+    try {
+      await donationService.claimDonation(donationId);
+      toast.success("Donation claimed successfully!", {
+        description: "The donor has been notified. Please coordinate for pickup."
+      });
+      fetchDonations();
+      fetchMyRequests();
+      fetchStats();
+    } catch (error: any) {
+      toast.error("Failed to claim donation", {
+        description: error.response?.data?.message || "Please try again"
+      });
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "available": return "bg-green-500";
+      case "claimed": return "bg-blue-500";
+      case "in-transit": return "bg-yellow-500";
+      case "completed": return "bg-gray-500";
+      default: return "bg-gray-500";
+    }
+  };
+
+  const filteredDonations = donations.filter(donation =>
+    donation.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    donation.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-background pt-20 pb-12">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="mb-8 animate-fade-in">
           <h1 className="text-4xl font-bold text-foreground mb-2">Receiver Dashboard</h1>
-          <p className="text-muted-foreground">View and accept available donations in your area</p>
+          <p className="text-muted-foreground">
+            Welcome, {user?.organizationName || user?.fullName}! Find and claim available donations.
+          </p>
         </div>
 
+        {/* Stats Cards */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Received This Month</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Claimed Donations</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary">18</div>
+              <div className="text-3xl font-bold text-primary">
+                {loading ? <Loader2 className="w-8 h-8 animate-spin" /> : myRequests.length}
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Pickups</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Completed Pickups</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-accent-foreground">2</div>
+              <div className="text-3xl font-bold text-accent-foreground">
+                {loading ? <Loader2 className="w-8 h-8 animate-spin" /> : stats?.completedDonations || 0}
+              </div>
             </CardContent>
           </Card>
           <Card>
@@ -63,80 +128,154 @@ const ReceiverDashboard = () => {
               <CardTitle className="text-sm font-medium text-muted-foreground">People Helped</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary">450+</div>
+              <div className="text-3xl font-bold text-primary">
+                {loading ? <Loader2 className="w-8 h-8 animate-spin" /> : stats?.totalItems || 0}
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="mb-8 shadow-[var(--shadow-soft)]">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-6 h-6 text-primary" />
-              Available Donations Near You
-            </CardTitle>
-            <CardDescription>First-come, first-served basis</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {availableDonations.map((donation) => (
-                <div key={donation.id} className="p-6 bg-card border-2 border-border rounded-xl hover:border-primary/50 transition-all">
-                  <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-xl font-semibold">{donation.item}</h3>
-                        <Badge>{donation.type}</Badge>
+        {/* My Claimed Donations */}
+        {myRequests.length > 0 && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>My Claimed Donations</CardTitle>
+              <CardDescription>Donations you've claimed - coordinate with donors for pickup</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {myRequests.map((donation) => (
+                  <Card key={donation._id} className="border border-blue-200 bg-blue-50/50">
+                    <CardContent className="pt-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-lg font-semibold">{donation.itemName}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {donation.type.charAt(0).toUpperCase() + donation.type.slice(1)} • Quantity: {donation.quantity}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Donor: {donation.donorId?.fullName || "Unknown"}
+                          </p>
+                        </div>
+                        <Badge className={getStatusColor(donation.status)}>
+                          {donation.status}
+                        </Badge>
                       </div>
-                      <p className="text-muted-foreground mb-2">Quantity: {donation.quantity}</p>
-                      <div className="flex flex-wrap gap-4 text-sm">
-                        <span className="flex items-center gap-1 text-muted-foreground">
+
+                      <p className="text-sm text-muted-foreground mb-3">{donation.description}</p>
+
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
                           <MapPin className="w-4 h-4" />
-                          {donation.location} • {donation.distance}
+                          {donation.location?.address || "No address"}
                         </span>
-                        {donation.expiry && (
-                          <span className="flex items-center gap-1 text-destructive font-medium">
+                        {donation.expiryTime && (
+                          <span className="flex items-center gap-1 text-orange-600">
                             <Clock className="w-4 h-4" />
-                            Collect within {donation.expiry}
+                            Expires: {new Date(donation.expiryTime).toLocaleString()}
                           </span>
                         )}
                       </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={() => handleAccept(donation.item)} className="gap-2">
-                        <CheckCircle className="w-4 h-4" />
-                        Accept
-                      </Button>
-                      <Button onClick={() => handleReject(donation.item)} variant="outline" className="gap-2">
-                        <XCircle className="w-4 h-4" />
-                        Decline
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
+        {/* Available Donations */}
         <Card>
           <CardHeader>
-            <CardTitle>Confirmed Requests</CardTitle>
-            <CardDescription>Track your accepted donations</CardDescription>
+            <CardTitle>Available Donations</CardTitle>
+            <CardDescription>Browse and claim donations that match your needs</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {confirmedRequests.map((request, idx) => (
-                <div key={idx} className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
-                  <div>
-                    <p className="font-medium">{request.item}</p>
-                    <p className="text-sm text-muted-foreground">{request.quantity}</p>
-                  </div>
-                  <div className="text-right">
-                    <Badge variant="outline" className="mb-1">{request.status}</Badge>
-                    <p className="text-sm text-muted-foreground">ETA: {request.eta}</p>
-                  </div>
-                </div>
-              ))}
+            {/* Filters */}
+            <div className="grid md:grid-cols-3 gap-4 mb-6">
+              <div className="md:col-span-2 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search donations..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="food">🍛 Food</SelectItem>
+                  <SelectItem value="books">📚 Books</SelectItem>
+                  <SelectItem value="clothes">👕 Clothes</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Donations List */}
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : filteredDonations.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No donations available at the moment.</p>
+                <p className="text-sm mt-2">Check back later or adjust your filters.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredDonations.map((donation) => (
+                  <Card key={donation._id} className="border hover:shadow-md transition-shadow">
+                    <CardContent className="pt-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="text-lg font-semibold">{donation.itemName}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {donation.type.charAt(0).toUpperCase() + donation.type.slice(1)} • Quantity: {donation.quantity}
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                By: {donation.donorId?.fullName || "Anonymous Donor"}
+                                {donation.donorId?.organizationName && ` (${donation.donorId.organizationName})`}
+                              </p>
+                            </div>
+                            <Badge className="bg-green-500">Available</Badge>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-muted-foreground mb-3">{donation.description}</p>
+
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-4 h-4" />
+                          {donation.location?.address || "Location not specified"}
+                        </span>
+                        {donation.expiryTime && (
+                          <span className="flex items-center gap-1 text-orange-600 font-medium">
+                            <Clock className="w-4 h-4" />
+                            Expires: {new Date(donation.expiryTime).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+
+                      <Button
+                        onClick={() => handleClaim(donation._id)}
+                        className="w-full"
+                      >
+                        <Heart className="w-4 h-4 mr-2" />
+                        Claim This Donation
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

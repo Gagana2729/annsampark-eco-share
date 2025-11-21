@@ -1,15 +1,25 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { authService } from '@/services';
+
+interface User {
+  _id: string;
+  email: string;
+  fullName: string;
+  role: string;
+  phone?: string;
+  address?: any;
+  organizationName?: string;
+  verified: boolean;
+  impactScore: number;
+}
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   userRole: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string, role: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string, role: string, organizationName?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -17,87 +27,115 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Fetch user role when session changes
-        if (session?.user) {
-          setTimeout(() => {
-            fetchUserRole(session.user.id);
-          }, 0);
-        } else {
+    // Check for existing session
+    const initAuth = async () => {
+      const token = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+
+      if (token && storedUser) {
+        try {
+          // Verify token is still valid by fetching user
+          const response = await authService.getMe();
+          const userData = response.data;
+          setUser(userData);
+          setUserRole(userData.role);
+        } catch (error) {
+          // Token invalid, clear storage
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          setUser(null);
           setUserRole(null);
         }
       }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserRole(session.user.id);
-      }
       setLoading(false);
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    initAuth();
   }, []);
 
-  const fetchUserRole = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .single();
-    
-    if (!error && data) {
-      setUserRole(data.role);
+  const signIn = async (email: string, password: string) => {
+    try {
+      const response = await authService.login(email, password);
+      const { user: userData, token, refreshToken } = response.data;
+
+      // Store tokens and user
+      localStorage.setItem('token', token);
+      localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      setUser(userData);
+      setUserRole(userData.role);
+
+      return { error: null };
+    } catch (error: any) {
+      return {
+        error: {
+          message: error.response?.data?.message || 'Login failed'
+        }
+      };
     }
   };
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
-  };
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    role: string,
+    organizationName?: string
+  ) => {
+    try {
+      const response = await authService.register({
+        email,
+        password,
+        fullName,
+        role,
+        organizationName,
+      });
+      const { user: userData, token, refreshToken } = response.data;
 
-  const signUp = async (email: string, password: string, fullName: string, role: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-          role: role,
-        },
-      },
-    });
-    return { error };
+      // Store tokens and user
+      localStorage.setItem('token', token);
+      localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      setUser(userData);
+      setUserRole(userData.role);
+
+      return { error: null };
+    } catch (error: any) {
+      return {
+        error: {
+          message: error.response?.data?.message || 'Registration failed'
+        }
+      };
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUserRole(null);
-    navigate('/login');
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Clear local storage
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+
+      setUser(null);
+      setUserRole(null);
+      navigate('/login');
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, userRole, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, userRole, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
@@ -110,3 +148,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

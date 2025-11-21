@@ -1,8 +1,31 @@
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shirt, Heart, Users, TrendingUp } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const Clothes = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleDonateClick = () => {
+    if (!user) {
+      toast.error("Please login to donate clothes");
+      navigate("/login");
+      return;
+    }
+    navigate("/donor-dashboard");
+  };
+
+  const handleRegisterNGO = () => {
+    if (!user) {
+      navigate("/login");
+    } else {
+      navigate("/receiver-dashboard");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pt-20 pb-12">
       <div className="container mx-auto px-4 max-w-6xl">
@@ -13,7 +36,7 @@ const Clothes = () => {
           </h1>
           <p className="text-2xl text-muted-foreground mb-4">Donate Clothes, Warm Hearts 👕</p>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Your gently used clothing can make a difference. Donate to verified NGOs and help those in need 
+            Your gently used clothing can make a difference. Donate to verified NGOs and help those in need
             while reducing textile waste and promoting sustainable fashion.
           </p>
         </div>
@@ -110,15 +133,15 @@ const Clothes = () => {
         <div className="bg-[var(--gradient-primary)] text-white p-12 rounded-2xl text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to Make a Difference?</h2>
           <p className="text-xl mb-8 text-white/90 max-w-2xl mx-auto">
-            Your unused clothes can provide warmth and dignity to someone in need. 
+            Your unused clothes can provide warmth and dignity to someone in need.
             Join our community of donors today!
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
-            <Button size="lg" className="bg-white text-primary hover:bg-white/90">
+            <Button size="lg" className="bg-white text-primary hover:bg-white/90" onClick={handleDonateClick}>
               <Shirt className="w-5 h-5 mr-2" />
               Donate Clothes Now
             </Button>
-            <Button size="lg" variant="outline" className="bg-white/10 text-white border-white hover:bg-white/20">
+            <Button size="lg" variant="outline" className="bg-white/10 text-white border-white hover:bg-white/20" onClick={handleRegisterNGO}>
               Register as NGO
             </Button>
           </div>
